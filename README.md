@@ -74,10 +74,26 @@ pnpm run deploy         # Cloudflare Workers (static assets) にデプロイ
 - clone直後は `pnpm install` すれば `prepare` がフックを張る（手動なら `git config core.hooksPath .githooks`）
 - gitleaks-action は個人アカウントのためライセンス鍵不要
 
+## ページ構成（マルチページ）
+
+| URL | 中身 |
+|---|---|
+| `/`（`index.html`） | ランディングページ（宣伝用・OGPもここ）。「いますぐプレイ」で `play.html` へ |
+| `/play.html` | ゲーム本体 |
+
+Vite のマルチページ入力（`vite.config.mjs`）。SNSで共有するのは LP（`/`）。
+
+## OGP / SNSサムネ
+
+- `public/ogp.png`（1200×630）が共有時のサムネ。クローラーはWebGLを実行しないので静的画像必須
+- `index.html` / `play.html` の `REPLACE-WITH-YOUR-DOMAIN` を**デプロイ先の絶対URLに置換**する（og:url / og:image は絶対URL必須）
+- 置換・再デプロイ後、Facebook シェアデバッガ（developers.facebook.com/tools/debug）で再取得（FBはキャッシュが強い）
+
 ## 構成
 
+- `index.html` — ランディングページ（自己完結のHTML/CSS、CSSでグリッド床と夕日を描画）
+- `play.html` — ゲームのHUD・タイトル・ステージ選択・ポーズ（DOM/CSS）
 - `src/main.js` — ゲーム本体（テーマシステム・シェーダー・ボール/壁/装飾ビルダー・画面フロー・ゲームループ）
 - `src/audio.js` — WebAudio効果音合成 + BGMループ
-- `index.html` — HUD・タイトル・ステージ選択・ポーズ（DOM/CSS）
-- `public/bgm.mp3` — BGM音源
+- `public/bgm.mp3` — BGM音源 / `public/ogp.png` — OGP画像 / `public/shots/` — LP用スクショ
 - `wrangler.jsonc` — Cloudflare Workers static assets デプロイ設定

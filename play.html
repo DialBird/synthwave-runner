@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>NEON RUSH</title>
+<meta name="description" content="シンセウェーブ・砂浜・ジャングルの3ステージを駆け抜ける3Dランナー。ブラウザですぐ遊べる。">
+
+<!-- OGP / Twitter（SNS共有時のサムネ）
+     重要: og:url と og:image は「絶対URL」必須。デプロイ先ドメインに置き換えること。
+     例: https://synthwave-runner.<account>.workers.dev -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="NEON RUSH">
+<meta property="og:title" content="NEON RUSH — 3Dネオンランナー">
+<meta property="og:description" content="シンセウェーブ・砂浜・ジャングルの3ステージを駆け抜ける3Dランナー。ブラウザですぐ遊べる。">
+<meta property="og:url" content="https://REPLACE-WITH-YOUR-DOMAIN/play.html">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 100%; height: 100%; overflow: hidden; background: #0a0014; }
+  canvas { display: block; }
+
+  #hud {
+    position: fixed; inset: 0; pointer-events: none;
+    font-family: 'Arial Black', 'Avenir Next', 'Helvetica Neue', sans-serif;
+    user-select: none; -webkit-user-select: none;
+  }
+
+  #score {
+    position: absolute; top: 4%; left: 50%; transform: translateX(-50%);
+    font-style: italic; font-weight: 900; font-size: clamp(44px, 9vw, 72px);
+    letter-spacing: 2px; line-height: 1;
+    background: linear-gradient(180deg, #fff6a9 0%, #ffd319 35%, #ff5fa0 75%, #ff2975 100%);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+    filter: drop-shadow(0 0 14px rgba(255, 60, 150, .85)) drop-shadow(0 2px 0 rgba(120, 0, 60, .9));
+  }
+
+  #combo {
+    position: absolute; top: calc(4% + clamp(48px, 9.5vw, 78px)); left: 50%; transform: translateX(-50%);
+    font-style: italic; font-weight: 900; font-size: clamp(16px, 3vw, 22px);
+    letter-spacing: 3px; color: #ff9de2;
+    text-shadow: 0 0 10px rgba(255, 80, 200, .9), 0 0 24px rgba(255, 40, 160, .6);
+    opacity: 0; transition: opacity .25s;
+  }
+  #combo.on { opacity: 1; }
+
+  #dist {
+    position: absolute; top: 4.5%; right: 5%;
+    font-weight: 800; font-style: italic; font-size: clamp(15px, 2.6vw, 20px);
+    color: #d8f6ff; letter-spacing: 1px;
+    text-shadow: 0 0 8px rgba(90, 220, 255, .9);
+  }
+
+  .popup {
+    position: absolute; transform: translate(-50%, -50%);
+    font-style: italic; font-weight: 900; font-size: clamp(26px, 5.5vw, 38px);
+    letter-spacing: 1px; white-space: nowrap;
+    background: linear-gradient(180deg, #fffbe0 0%, #ffd319 50%, #ff8a00 100%);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+    filter: drop-shadow(0 0 10px rgba(255, 200, 40, .95));
+    animation: pop .95s cubic-bezier(.17, .89, .32, 1.27) forwards;
+  }
+  @keyframes pop {
+    0%   { opacity: 0; transform: translate(-50%, -50%) scale(.3) rotate(-8deg); }
+    18%  { opacity: 1; transform: translate(-50%, -54%) scale(1.25) rotate(2deg); }
+    35%  { transform: translate(-50%, -58%) scale(1) rotate(0deg); }
+    100% { opacity: 0; transform: translate(-50%, -150%) scale(.9); }
+  }
+
+  #flash {
+    position: absolute; inset: 0; background: radial-gradient(ellipse at center, transparent 30%, rgba(255, 30, 60, .55) 100%);
+    opacity: 0; transition: opacity .1s;
+  }
+
+  #lives {
+    position: absolute; top: 4.5%; left: 5%;
+    font-size: clamp(18px, 3.4vw, 26px); letter-spacing: 4px; color: #ff4f9e;
+    text-shadow: 0 0 10px rgba(255, 60, 150, .95), 0 0 22px rgba(255, 30, 120, .6);
+  }
+  #lives .off { opacity: .22; text-shadow: none; }
+
+  #gameover {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;
+    background: radial-gradient(ellipse at center, rgba(50, 0, 35, .5) 0%, rgba(8, 0, 18, .88) 100%);
+    opacity: 0; pointer-events: none; transition: opacity .45s;
+  }
+  #gameover.on { opacity: 1; }
+  #gameover.clear {
+    background: radial-gradient(ellipse at center, rgba(0, 50, 55, .5) 0%, rgba(4, 8, 22, .88) 100%);
+  }
+  #gameover .go-title {
+    font-style: italic; font-weight: 900; font-size: clamp(42px, 9.5vw, 70px); letter-spacing: 5px;
+    background: linear-gradient(180deg, #ffe0ec 0%, #ff2975 55%, #c1004a 100%);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+    filter: drop-shadow(0 0 18px rgba(255, 40, 110, .9));
+  }
+  #gameover.clear .go-title {
+    background: linear-gradient(180deg, #d8fff0 0%, #18e7ff 50%, #b06bff 100%);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+    filter: drop-shadow(0 0 20px rgba(40, 220, 255, .95));
+  }
+  #gameover .go-score {
+    font-style: italic; font-weight: 900; font-size: clamp(34px, 7.5vw, 54px); letter-spacing: 2px;
+    background: linear-gradient(180deg, #fff6a9 0%, #ffd319 45%, #ff8a00 100%);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+    filter: drop-shadow(0 0 14px rgba(255, 190, 40, .85));
+  }
+  #gameover .go-dist {
+    font-weight: 800; font-style: italic; font-size: clamp(15px, 3vw, 20px); letter-spacing: 2px;
+    color: #9af2ff; text-shadow: 0 0 10px rgba(60, 210, 255, .9);
+  }
+  #gameover .go-best {
+    margin-top: 4px; font-weight: 800; font-style: italic; font-size: clamp(13px, 2.5vw, 17px); letter-spacing: 3px;
+    color: #d7c2ff; text-shadow: 0 0 10px rgba(150, 110, 255, .8);
+  }
+  #gameover .go-record {
+    margin-top: 14px; font-style: italic; font-weight: 900; font-size: clamp(18px, 4vw, 28px); letter-spacing: 4px;
+    background: linear-gradient(180deg, #fffae0 0%, #ffe23a 45%, #ff7bd5 100%);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+    filter: drop-shadow(0 0 16px rgba(255, 220, 60, .95));
+    opacity: 0; transform: scale(.6); pointer-events: none;
+  }
+  #gameover .go-record.show { animation: record-pop 2s cubic-bezier(.17, .89, .32, 1.27) infinite; }
+  @keyframes record-pop {
+    0%, 100% { opacity: 1; transform: scale(1) rotate(-2deg); }
+    50%      { opacity: 1; transform: scale(1.12) rotate(2deg); }
+  }
+  #gameover .go-retry {
+    margin-top: 22px; font-weight: 700; font-size: clamp(13px, 2.6vw, 16px); letter-spacing: 3px;
+    color: rgba(235, 242, 255, .9); text-shadow: 0 0 8px rgba(120, 80, 255, .85);
+    animation: blink 1.4s ease-in-out infinite;
+  }
+
+  @keyframes blink { 50% { opacity: .35; } }
+
+  /* HUD はプレイ中のみ表示（タイトル/選択中は隠す） */
+  body.menu #score, body.menu #combo, body.menu #dist, body.menu #lives { opacity: 0; }
+
+  /* ---- title ---- */
+  #title {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px;
+    transition: opacity .4s;
+  }
+  #title.hidden { opacity: 0; pointer-events: none; }
+  #title .t-logo {
+    font-style: italic; font-weight: 900; font-size: clamp(48px, 12vw, 104px); letter-spacing: 5px;
+    background: linear-gradient(180deg, #9af7ff 0%, #18e7ff 42%, #ff2bd6 100%);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+    filter: drop-shadow(0 0 22px rgba(40, 200, 255, .85));
+  }
+  #title .t-start {
+    font-weight: 800; font-size: clamp(13px, 3vw, 18px); letter-spacing: 3px;
+    color: rgba(235, 242, 255, .92); text-shadow: 0 0 10px rgba(120, 80, 255, .9);
+    animation: blink 1.5s ease-in-out infinite;
+  }
+
+  /* ---- stage select ---- */
+  #select {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 22px;
+    transition: opacity .35s;
+  }
+  #select.hidden { opacity: 0; pointer-events: none; }
+  #select .s-head {
+    font-style: italic; font-weight: 900; font-size: clamp(20px, 5vw, 34px); letter-spacing: 5px;
+    color: #eaf2ff; text-shadow: 0 0 14px rgba(120, 130, 255, .9);
+  }
+  #select .s-cards { display: flex; gap: clamp(10px, 3vw, 22px); }
+  .s-card {
+    -webkit-appearance: none; appearance: none; cursor: pointer;
+    pointer-events: auto;
+    width: clamp(90px, 26vw, 150px); height: clamp(120px, 34vw, 190px);
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px;
+    border-radius: 16px; border: 2px solid rgba(150, 170, 255, .35);
+    background: rgba(20, 12, 40, .55); color: #fff;
+    transition: transform .18s, border-color .18s, box-shadow .18s, background .18s;
+  }
+  .s-card .s-emoji { font-size: clamp(34px, 9vw, 56px); line-height: 1; }
+  .s-card .s-name { font-weight: 800; font-size: clamp(13px, 3.2vw, 18px); letter-spacing: 1px; }
+  .s-card.active {
+    transform: translateY(-8px) scale(1.06);
+    border-color: #38e8ff;
+    background: rgba(40, 24, 70, .8);
+    box-shadow: 0 0 26px rgba(56, 232, 255, .7), inset 0 0 18px rgba(255, 60, 200, .25);
+  }
+  #select .s-hint {
+    font-weight: 700; font-size: clamp(11px, 2.6vw, 15px); letter-spacing: 2px;
+    color: rgba(225, 235, 255, .8); text-shadow: 0 0 8px rgba(120, 80, 255, .8);
+    animation: blink 1.7s ease-in-out infinite;
+  }
+
+  /* ---- pause ---- */
+  #pausebtn {
+    position: absolute; left: 18px; bottom: 18px; pointer-events: auto;
+    width: 46px; height: 46px; border-radius: 50%;
+    -webkit-appearance: none; appearance: none; cursor: pointer;
+    border: 2px solid rgba(160, 180, 255, .5); background: rgba(18, 10, 36, .55);
+    color: #eaf2ff; font-size: 18px; line-height: 1;
+    transition: opacity .3s, transform .12s;
+  }
+  #pausebtn:active { transform: scale(.92); }
+  body.menu #pausebtn, body.paused #pausebtn { opacity: 0; pointer-events: none; }
+
+  #pause {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px;
+    background: radial-gradient(ellipse at center, rgba(20, 8, 44, .55) 0%, rgba(6, 2, 16, .9) 100%);
+    opacity: 0; pointer-events: none; transition: opacity .3s;
+  }
+  body.paused #pause { opacity: 1; pointer-events: auto; }
+  #pause .p-head {
+    font-style: italic; font-weight: 900; font-size: clamp(30px, 8vw, 54px); letter-spacing: 6px;
+    background: linear-gradient(180deg, #cfe6ff 0%, #6aa8ff 50%, #b06bff 100%);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+    filter: drop-shadow(0 0 16px rgba(80, 140, 255, .85)); margin-bottom: 8px;
+  }
+  .p-opt {
+    -webkit-appearance: none; appearance: none; cursor: pointer; pointer-events: auto;
+    width: clamp(220px, 64vw, 320px); padding: 14px 18px;
+    border-radius: 12px; border: 2px solid rgba(150, 170, 255, .3);
+    background: rgba(22, 14, 44, .6); color: #eef4ff;
+    font-weight: 800; font-size: clamp(15px, 3.6vw, 19px); letter-spacing: 2px;
+    transition: transform .15s, border-color .15s, box-shadow .15s, background .15s;
+  }
+  .p-opt.active {
+    transform: scale(1.05); border-color: #38e8ff; background: rgba(40, 24, 70, .85);
+    box-shadow: 0 0 22px rgba(56, 232, 255, .65);
+  }
+  #pause .p-hint {
+    margin-top: 6px; font-weight: 700; font-size: clamp(11px, 2.6vw, 14px); letter-spacing: 2px;
+    color: rgba(220, 230, 255, .75); text-shadow: 0 0 8px rgba(120, 80, 255, .8);
+  }
+</style>
+</head>
+<body>
+<div id="hud">
+  <div id="score">0</div>
+  <div id="combo">COMBO ×2</div>
+  <div id="dist">0m</div>
+  <div id="lives"></div>
+  <div id="popups"></div>
+  <div id="flash"></div>
+  <div id="gameover">
+    <div class="go-title" id="go-title">GAME OVER</div>
+    <div class="go-score" id="go-score">0</div>
+    <div class="go-dist" id="go-dist">0m</div>
+    <div class="go-best" id="go-best">BEST 0</div>
+    <div class="go-record" id="go-record">★ NEW RECORD ★</div>
+    <div class="go-retry">PRESS ANY KEY / TAP TO RETRY</div>
+  </div>
+  <div id="title">
+    <div class="t-logo">NEON RUSH</div>
+    <div class="t-start">PRESS ANY KEY / TAP TO START</div>
+  </div>
+  <div id="select">
+    <div class="s-head">SELECT STAGE</div>
+    <div class="s-cards">
+      <button class="s-card" data-i="0"><span class="s-emoji">🌃</span><span class="s-name">ネオン街</span></button>
+      <button class="s-card" data-i="1"><span class="s-emoji">🏖️</span><span class="s-name">砂浜</span></button>
+      <button class="s-card" data-i="2"><span class="s-emoji">🌿</span><span class="s-name">ジャングル</span></button>
+    </div>
+    <div class="s-hint">← → / STICK&nbsp;SELECT&nbsp;&nbsp;·&nbsp;&nbsp;ENTER / Ⓐ&nbsp;START</div>
+  </div>
+  <button id="pausebtn" aria-label="pause">⏸</button>
+  <div id="pause">
+    <div class="p-head">PAUSED</div>
+    <button class="p-opt" data-i="0">▶&nbsp;&nbsp;再開</button>
+    <button class="p-opt" data-i="1">≡&nbsp;&nbsp;ステージ選択へ</button>
+    <div class="p-hint">ESC / START で再開</div>
+  </div>
+</div>
+<script type="module" src="/src/main.js"></script>
+</body>
+</html>

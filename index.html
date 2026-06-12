@@ -2,264 +2,328 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>NEON RUSH</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NEON RUSH — ネオンを駆け抜ける3Dランナー</title>
+<meta name="description" content="シンセウェーブ・砂浜・ジャングルの3ステージを駆け抜けるブラウザ3Dランナー。効果音もBGMもゲームパッドも対応。インストール不要、いますぐ無料でプレイ。">
+
+<!-- OGP / Twitter（SNS共有時のサムネ）
+     重要: og:url と og:image は「絶対URL」必須。デプロイ先ドメインに置き換えること。
+     置換後は Facebook シェアデバッガで再取得すること。 -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="NEON RUSH">
+<meta property="og:title" content="NEON RUSH — ネオンを駆け抜ける3Dランナー">
+<meta property="og:description" content="シンセウェーブ・砂浜・ジャングルの3ステージを駆け抜けるブラウザ3Dランナー。いますぐ無料でプレイ。">
+<meta property="og:url" content="https://REPLACE-WITH-YOUR-DOMAIN/">
+<meta property="og:image" content="https://REPLACE-WITH-YOUR-DOMAIN/ogp.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:locale" content="ja_JP">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="NEON RUSH — ネオンを駆け抜ける3Dランナー">
+<meta name="twitter:description" content="シンセウェーブ・砂浜・ジャングルの3ステージを駆け抜けるブラウザ3Dランナー。いますぐ無料でプレイ。">
+<meta name="twitter:image" content="https://REPLACE-WITH-YOUR-DOMAIN/ogp.png">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:ital,wght@0,600;0,700;1,700&family=Zen+Kaku+Gothic+New:wght@400;500;700;900&display=swap" rel="stylesheet">
 <style>
+  :root {
+    --bg: #08010f; --bg2: #170a32;
+    --cyan: #21e8ff; --magenta: #ff2bd6; --pink: #ff5fa0; --violet: #b06bff;
+    --green: #46d36b;
+    --ink: #eef1ff; --muted: rgba(221, 229, 255, .64);
+    --edge: rgba(150, 170, 255, .16);
+    --display: 'Chakra Petch', sans-serif;
+    --body: 'Zen Kaku Gothic New', sans-serif;
+  }
   * { margin: 0; padding: 0; box-sizing: border-box; }
-  html, body { width: 100%; height: 100%; overflow: hidden; background: #0a0014; }
-  canvas { display: block; }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--bg); color: var(--ink); font-family: var(--body);
+    overflow-x: hidden; line-height: 1.7; -webkit-font-smoothing: antialiased;
+  }
+  a { color: inherit; text-decoration: none; }
+  .wrap { width: min(1120px, 92vw); margin: 0 auto; }
 
-  #hud {
-    position: fixed; inset: 0; pointer-events: none;
-    font-family: 'Arial Black', 'Avenir Next', 'Helvetica Neue', sans-serif;
-    user-select: none; -webkit-user-select: none;
+  /* ---------------- hero ---------------- */
+  .hero {
+    position: relative; min-height: 100svh; overflow: hidden;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    text-align: center; padding: 80px 20px 120px;
+  }
+  .sky {
+    position: absolute; inset: 0; z-index: 0;
+    background:
+      radial-gradient(120% 80% at 50% 78%, rgba(255, 45, 111, .35) 0%, transparent 55%),
+      linear-gradient(180deg, #08010f 0%, #1a0838 46%, #3a0f47 70%, #5b1356 100%);
+  }
+  .stars {
+    position: absolute; inset: 0; z-index: 0; opacity: .9;
+    background-image:
+      radial-gradient(1.4px 1.4px at 20% 18%, #fff, transparent),
+      radial-gradient(1.2px 1.2px at 70% 12%, #cfe6ff, transparent),
+      radial-gradient(1.3px 1.3px at 42% 28%, #fff, transparent),
+      radial-gradient(1px 1px at 86% 22%, #b9d4ff, transparent),
+      radial-gradient(1.2px 1.2px at 12% 34%, #fff, transparent),
+      radial-gradient(1px 1px at 58% 8%, #fff, transparent);
+    mask: linear-gradient(to bottom, #000 0%, transparent 52%);
+  }
+  .sun {
+    position: absolute; left: 50%; top: 33%; transform: translate(-50%, -50%); z-index: 0;
+    width: min(64vw, 440px); aspect-ratio: 1; border-radius: 50%;
+    background: linear-gradient(#ffe24a 0%, #ff9a36 40%, #ff2d6f 72%, #b3145f 100%);
+    box-shadow: 0 0 160px 36px rgba(255, 70, 140, .42);
+  }
+  .sun::after {
+    content: ""; position: absolute; inset: 0; border-radius: 50%;
+    background: repeating-linear-gradient(0deg, transparent 0 13px, var(--bg) 13px 18px);
+    -webkit-mask: linear-gradient(to bottom, transparent 50%, #000 58%);
+    mask: linear-gradient(to bottom, transparent 50%, #000 58%);
+  }
+  .grid {
+    position: absolute; left: 50%; bottom: -3%; z-index: 0;
+    width: 260%; height: 58%; transform: translateX(-50%) perspective(380px) rotateX(74deg);
+    transform-origin: 50% 100%;
+    background-image:
+      repeating-linear-gradient(90deg, transparent 0 58px, rgba(255, 43, 214, .6) 58px 60px),
+      repeating-linear-gradient(0deg, transparent 0 58px, rgba(33, 232, 255, .5) 58px 60px);
+    -webkit-mask: linear-gradient(to top, #000 10%, transparent 76%);
+    mask: linear-gradient(to top, #000 10%, transparent 76%);
+    animation: gridmove 1.1s linear infinite;
+  }
+  @keyframes gridmove { to { background-position: 0 60px, 0 60px; } }
+  .scan {
+    position: absolute; inset: 0; z-index: 2; pointer-events: none; opacity: .35;
+    background: repeating-linear-gradient(0deg, rgba(0, 0, 0, .5) 0 1px, transparent 1px 3px);
   }
 
-  #score {
-    position: absolute; top: 4%; left: 50%; transform: translateX(-50%);
-    font-style: italic; font-weight: 900; font-size: clamp(44px, 9vw, 72px);
-    letter-spacing: 2px; line-height: 1;
-    background: linear-gradient(180deg, #fff6a9 0%, #ffd319 35%, #ff5fa0 75%, #ff2975 100%);
+  .hero-inner { position: relative; z-index: 3; }
+  .badge {
+    display: inline-block; font-family: var(--display); font-weight: 600; font-size: 13px;
+    letter-spacing: 4px; padding: 7px 16px; border-radius: 999px;
+    border: 1px solid var(--edge); background: rgba(12, 6, 30, .5);
+    color: var(--cyan); text-shadow: 0 0 10px rgba(33, 232, 255, .7);
+  }
+  .logo {
+    font-family: var(--display); font-style: italic; font-weight: 700;
+    font-size: clamp(56px, 15vw, 150px); line-height: .92; letter-spacing: 2px;
+    margin: 22px 0 6px;
+    background: linear-gradient(180deg, #d8fbff 0%, #21e8ff 38%, #b06bff 66%, #ff2bd6 100%);
     -webkit-background-clip: text; background-clip: text; color: transparent;
-    filter: drop-shadow(0 0 14px rgba(255, 60, 150, .85)) drop-shadow(0 2px 0 rgba(120, 0, 60, .9));
+    filter: drop-shadow(0 0 26px rgba(40, 200, 255, .55)) drop-shadow(0 4px 0 rgba(120, 0, 70, .5));
+    animation: flicker 5s infinite;
   }
+  @keyframes flicker {
+    0%, 96%, 100% { opacity: 1; }
+    97% { opacity: .72; } 98% { opacity: 1; } 98.5% { opacity: .82; }
+  }
+  .tagline {
+    font-weight: 700; font-size: clamp(16px, 3.6vw, 24px); letter-spacing: 1px;
+    color: var(--ink); text-shadow: 0 0 18px rgba(120, 80, 255, .5);
+  }
+  .sub {
+    margin-top: 10px; color: var(--muted); font-size: clamp(13px, 2.6vw, 16px);
+  }
+  .cta {
+    display: inline-flex; align-items: center; gap: 10px; margin-top: 30px;
+    font-family: var(--display); font-weight: 700; font-style: italic;
+    font-size: clamp(18px, 4vw, 24px); letter-spacing: 2px;
+    padding: 16px 38px; border-radius: 999px; color: #1a0014;
+    background: linear-gradient(100deg, #21e8ff, #b06bff 50%, #ff2bd6);
+    box-shadow: 0 0 0 0 rgba(255, 43, 214, .5), 0 10px 34px rgba(255, 43, 150, .45);
+    transition: transform .16s ease, box-shadow .3s ease;
+    animation: pulse 2.4s ease-in-out infinite;
+  }
+  .cta:hover { transform: translateY(-3px) scale(1.04); box-shadow: 0 0 30px 4px rgba(33, 232, 255, .6), 0 14px 40px rgba(255, 43, 150, .6); }
+  @keyframes pulse {
+    50% { box-shadow: 0 0 34px 6px rgba(255, 43, 214, .55), 0 10px 34px rgba(255, 43, 150, .45); }
+  }
+  .chips { margin-top: 22px; display: flex; flex-wrap: wrap; gap: 10px 18px; justify-content: center; color: var(--muted); font-size: 13px; font-weight: 500; }
+  .chips span { display: inline-flex; align-items: center; gap: 7px; }
+  .chips b { color: var(--cyan); font-weight: 700; }
+  .scrollcue {
+    position: absolute; bottom: 26px; left: 50%; transform: translateX(-50%); z-index: 3;
+    color: var(--muted); font-family: var(--display); font-size: 11px; letter-spacing: 3px;
+    animation: bob 1.8s ease-in-out infinite;
+  }
+  @keyframes bob { 50% { transform: translateX(-50%) translateY(8px); } }
 
-  #combo {
-    position: absolute; top: calc(4% + clamp(48px, 9.5vw, 78px)); left: 50%; transform: translateX(-50%);
-    font-style: italic; font-weight: 900; font-size: clamp(16px, 3vw, 22px);
-    letter-spacing: 3px; color: #ff9de2;
-    text-shadow: 0 0 10px rgba(255, 80, 200, .9), 0 0 24px rgba(255, 40, 160, .6);
-    opacity: 0; transition: opacity .25s;
-  }
-  #combo.on { opacity: 1; }
+  /* ---------------- sections ---------------- */
+  section { position: relative; padding: clamp(70px, 12vw, 130px) 0; }
+  .eyebrow { font-family: var(--display); font-weight: 600; letter-spacing: 5px; font-size: 13px; color: var(--magenta); text-shadow: 0 0 12px rgba(255, 43, 214, .6); }
+  .h2 { font-family: var(--display); font-style: italic; font-weight: 700; font-size: clamp(28px, 6vw, 52px); line-height: 1.1; margin: 12px 0 8px; letter-spacing: 1px; }
+  .lead { color: var(--muted); max-width: 56ch; }
 
-  #dist {
-    position: absolute; top: 4.5%; right: 5%;
-    font-weight: 800; font-style: italic; font-size: clamp(15px, 2.6vw, 20px);
-    color: #d8f6ff; letter-spacing: 1px;
-    text-shadow: 0 0 8px rgba(90, 220, 255, .9);
+  /* stages */
+  .stages { display: grid; grid-template-columns: repeat(3, 1fr); gap: 22px; margin-top: 48px; }
+  .stage {
+    position: relative; border-radius: 18px; overflow: hidden; display: block;
+    border: 1px solid var(--edge); background: rgba(16, 9, 36, .6);
+    transition: transform .2s ease, box-shadow .25s ease, border-color .25s ease;
   }
+  .stage img { width: 100%; aspect-ratio: 1/1; object-fit: cover; display: block; opacity: .92; }
+  .stage .meta { padding: 16px 18px 20px; }
+  .stage .n { font-family: var(--display); font-style: italic; font-weight: 700; font-size: 20px; letter-spacing: 1px; }
+  .stage .d { color: var(--muted); font-size: 13.5px; margin-top: 4px; }
+  .stage .tag { position: absolute; top: 12px; left: 12px; font-family: var(--display); font-size: 11px; letter-spacing: 2px; padding: 4px 10px; border-radius: 999px; background: rgba(8, 2, 16, .7); border: 1px solid var(--edge); }
+  .stage:hover { transform: translateY(-8px); }
+  .stage.neon:hover { border-color: var(--magenta); box-shadow: 0 18px 50px rgba(255, 43, 214, .35); }
+  .stage.neon .tag, .stage.neon .n { color: var(--magenta); }
+  .stage.beach:hover { border-color: var(--cyan); box-shadow: 0 18px 50px rgba(33, 232, 255, .3); }
+  .stage.beach .tag, .stage.beach .n { color: var(--cyan); }
+  .stage.jungle:hover { border-color: var(--green); box-shadow: 0 18px 50px rgba(70, 211, 107, .3); }
+  .stage.jungle .tag, .stage.jungle .n { color: var(--green); }
 
-  .popup {
-    position: absolute; transform: translate(-50%, -50%);
-    font-style: italic; font-weight: 900; font-size: clamp(26px, 5.5vw, 38px);
-    letter-spacing: 1px; white-space: nowrap;
-    background: linear-gradient(180deg, #fffbe0 0%, #ffd319 50%, #ff8a00 100%);
-    -webkit-background-clip: text; background-clip: text; color: transparent;
-    filter: drop-shadow(0 0 10px rgba(255, 200, 40, .95));
-    animation: pop .95s cubic-bezier(.17, .89, .32, 1.27) forwards;
-  }
-  @keyframes pop {
-    0%   { opacity: 0; transform: translate(-50%, -50%) scale(.3) rotate(-8deg); }
-    18%  { opacity: 1; transform: translate(-50%, -54%) scale(1.25) rotate(2deg); }
-    35%  { transform: translate(-50%, -58%) scale(1) rotate(0deg); }
-    100% { opacity: 0; transform: translate(-50%, -150%) scale(.9); }
-  }
+  /* features */
+  .features { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; margin-top: 48px; }
+  .feat { padding: 26px 20px; border-radius: 16px; border: 1px solid var(--edge); background: linear-gradient(180deg, rgba(22, 12, 46, .6), rgba(10, 5, 24, .6)); }
+  .feat .ic { font-size: 30px; }
+  .feat h3 { font-family: var(--display); font-weight: 700; font-size: 17px; margin: 12px 0 6px; letter-spacing: .5px; }
+  .feat p { color: var(--muted); font-size: 13px; }
 
-  #flash {
-    position: absolute; inset: 0; background: radial-gradient(ellipse at center, transparent 30%, rgba(255, 30, 60, .55) 100%);
-    opacity: 0; transition: opacity .1s;
-  }
+  /* gallery */
+  .gallery { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; margin-top: 48px; }
+  .gallery img { width: 100%; border-radius: 14px; border: 1px solid var(--edge); aspect-ratio: 1/1; object-fit: cover; }
 
-  #lives {
-    position: absolute; top: 4.5%; left: 5%;
-    font-size: clamp(18px, 3.4vw, 26px); letter-spacing: 4px; color: #ff4f9e;
-    text-shadow: 0 0 10px rgba(255, 60, 150, .95), 0 0 22px rgba(255, 30, 120, .6);
+  /* final cta */
+  .final { text-align: center; }
+  .final .band {
+    border-radius: 24px; padding: clamp(40px, 8vw, 76px) 24px;
+    background:
+      radial-gradient(100% 140% at 50% 0%, rgba(255, 43, 214, .28), transparent 60%),
+      linear-gradient(180deg, rgba(24, 12, 52, .9), rgba(12, 6, 28, .9));
+    border: 1px solid var(--edge);
   }
-  #lives .off { opacity: .22; text-shadow: none; }
+  .final h2 { font-family: var(--display); font-style: italic; font-weight: 700; font-size: clamp(26px, 6vw, 48px); }
+  .final p { color: var(--muted); margin: 10px 0 6px; }
 
-  #gameover {
-    position: absolute; inset: 0;
-    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;
-    background: radial-gradient(ellipse at center, rgba(50, 0, 35, .5) 0%, rgba(8, 0, 18, .88) 100%);
-    opacity: 0; pointer-events: none; transition: opacity .45s;
-  }
-  #gameover.on { opacity: 1; }
-  #gameover.clear {
-    background: radial-gradient(ellipse at center, rgba(0, 50, 55, .5) 0%, rgba(4, 8, 22, .88) 100%);
-  }
-  #gameover .go-title {
-    font-style: italic; font-weight: 900; font-size: clamp(42px, 9.5vw, 70px); letter-spacing: 5px;
-    background: linear-gradient(180deg, #ffe0ec 0%, #ff2975 55%, #c1004a 100%);
-    -webkit-background-clip: text; background-clip: text; color: transparent;
-    filter: drop-shadow(0 0 18px rgba(255, 40, 110, .9));
-  }
-  #gameover.clear .go-title {
-    background: linear-gradient(180deg, #d8fff0 0%, #18e7ff 50%, #b06bff 100%);
-    -webkit-background-clip: text; background-clip: text; color: transparent;
-    filter: drop-shadow(0 0 20px rgba(40, 220, 255, .95));
-  }
-  #gameover .go-score {
-    font-style: italic; font-weight: 900; font-size: clamp(34px, 7.5vw, 54px); letter-spacing: 2px;
-    background: linear-gradient(180deg, #fff6a9 0%, #ffd319 45%, #ff8a00 100%);
-    -webkit-background-clip: text; background-clip: text; color: transparent;
-    filter: drop-shadow(0 0 14px rgba(255, 190, 40, .85));
-  }
-  #gameover .go-dist {
-    font-weight: 800; font-style: italic; font-size: clamp(15px, 3vw, 20px); letter-spacing: 2px;
-    color: #9af2ff; text-shadow: 0 0 10px rgba(60, 210, 255, .9);
-  }
-  #gameover .go-best {
-    margin-top: 4px; font-weight: 800; font-style: italic; font-size: clamp(13px, 2.5vw, 17px); letter-spacing: 3px;
-    color: #d7c2ff; text-shadow: 0 0 10px rgba(150, 110, 255, .8);
-  }
-  #gameover .go-record {
-    margin-top: 14px; font-style: italic; font-weight: 900; font-size: clamp(18px, 4vw, 28px); letter-spacing: 4px;
-    background: linear-gradient(180deg, #fffae0 0%, #ffe23a 45%, #ff7bd5 100%);
-    -webkit-background-clip: text; background-clip: text; color: transparent;
-    filter: drop-shadow(0 0 16px rgba(255, 220, 60, .95));
-    opacity: 0; transform: scale(.6); pointer-events: none;
-  }
-  #gameover .go-record.show { animation: record-pop 2s cubic-bezier(.17, .89, .32, 1.27) infinite; }
-  @keyframes record-pop {
-    0%, 100% { opacity: 1; transform: scale(1) rotate(-2deg); }
-    50%      { opacity: 1; transform: scale(1.12) rotate(2deg); }
-  }
-  #gameover .go-retry {
-    margin-top: 22px; font-weight: 700; font-size: clamp(13px, 2.6vw, 16px); letter-spacing: 3px;
-    color: rgba(235, 242, 255, .9); text-shadow: 0 0 8px rgba(120, 80, 255, .85);
-    animation: blink 1.4s ease-in-out infinite;
-  }
+  footer { padding: 50px 0 64px; text-align: center; color: var(--muted); font-size: 13px; border-top: 1px solid var(--edge); }
+  footer .fl { font-family: var(--display); font-style: italic; color: var(--ink); letter-spacing: 1px; }
+  footer a { color: var(--cyan); }
 
-  @keyframes blink { 50% { opacity: .35; } }
+  /* reveal */
+  .reveal { opacity: 0; transform: translateY(26px); transition: opacity .7s ease, transform .7s cubic-bezier(.2, .7, .3, 1); }
+  .reveal.in { opacity: 1; transform: none; }
 
-  /* HUD はプレイ中のみ表示（タイトル/選択中は隠す） */
-  body.menu #score, body.menu #combo, body.menu #dist, body.menu #lives { opacity: 0; }
-
-  /* ---- title ---- */
-  #title {
-    position: absolute; inset: 0;
-    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px;
-    transition: opacity .4s;
+  @media (max-width: 760px) {
+    .stages, .features, .gallery { grid-template-columns: 1fr 1fr; }
   }
-  #title.hidden { opacity: 0; pointer-events: none; }
-  #title .t-logo {
-    font-style: italic; font-weight: 900; font-size: clamp(48px, 12vw, 104px); letter-spacing: 5px;
-    background: linear-gradient(180deg, #9af7ff 0%, #18e7ff 42%, #ff2bd6 100%);
-    -webkit-background-clip: text; background-clip: text; color: transparent;
-    filter: drop-shadow(0 0 22px rgba(40, 200, 255, .85));
+  @media (max-width: 480px) {
+    .stages, .features { grid-template-columns: 1fr; }
   }
-  #title .t-start {
-    font-weight: 800; font-size: clamp(13px, 3vw, 18px); letter-spacing: 3px;
-    color: rgba(235, 242, 255, .92); text-shadow: 0 0 10px rgba(120, 80, 255, .9);
-    animation: blink 1.5s ease-in-out infinite;
-  }
-
-  /* ---- stage select ---- */
-  #select {
-    position: absolute; inset: 0;
-    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 22px;
-    transition: opacity .35s;
-  }
-  #select.hidden { opacity: 0; pointer-events: none; }
-  #select .s-head {
-    font-style: italic; font-weight: 900; font-size: clamp(20px, 5vw, 34px); letter-spacing: 5px;
-    color: #eaf2ff; text-shadow: 0 0 14px rgba(120, 130, 255, .9);
-  }
-  #select .s-cards { display: flex; gap: clamp(10px, 3vw, 22px); }
-  .s-card {
-    -webkit-appearance: none; appearance: none; cursor: pointer;
-    pointer-events: auto;
-    width: clamp(90px, 26vw, 150px); height: clamp(120px, 34vw, 190px);
-    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px;
-    border-radius: 16px; border: 2px solid rgba(150, 170, 255, .35);
-    background: rgba(20, 12, 40, .55); color: #fff;
-    transition: transform .18s, border-color .18s, box-shadow .18s, background .18s;
-  }
-  .s-card .s-emoji { font-size: clamp(34px, 9vw, 56px); line-height: 1; }
-  .s-card .s-name { font-weight: 800; font-size: clamp(13px, 3.2vw, 18px); letter-spacing: 1px; }
-  .s-card.active {
-    transform: translateY(-8px) scale(1.06);
-    border-color: #38e8ff;
-    background: rgba(40, 24, 70, .8);
-    box-shadow: 0 0 26px rgba(56, 232, 255, .7), inset 0 0 18px rgba(255, 60, 200, .25);
-  }
-  #select .s-hint {
-    font-weight: 700; font-size: clamp(11px, 2.6vw, 15px); letter-spacing: 2px;
-    color: rgba(225, 235, 255, .8); text-shadow: 0 0 8px rgba(120, 80, 255, .8);
-    animation: blink 1.7s ease-in-out infinite;
-  }
-
-  /* ---- pause ---- */
-  #pausebtn {
-    position: absolute; left: 18px; bottom: 18px; pointer-events: auto;
-    width: 46px; height: 46px; border-radius: 50%;
-    -webkit-appearance: none; appearance: none; cursor: pointer;
-    border: 2px solid rgba(160, 180, 255, .5); background: rgba(18, 10, 36, .55);
-    color: #eaf2ff; font-size: 18px; line-height: 1;
-    transition: opacity .3s, transform .12s;
-  }
-  #pausebtn:active { transform: scale(.92); }
-  body.menu #pausebtn, body.paused #pausebtn { opacity: 0; pointer-events: none; }
-
-  #pause {
-    position: absolute; inset: 0;
-    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px;
-    background: radial-gradient(ellipse at center, rgba(20, 8, 44, .55) 0%, rgba(6, 2, 16, .9) 100%);
-    opacity: 0; pointer-events: none; transition: opacity .3s;
-  }
-  body.paused #pause { opacity: 1; pointer-events: auto; }
-  #pause .p-head {
-    font-style: italic; font-weight: 900; font-size: clamp(30px, 8vw, 54px); letter-spacing: 6px;
-    background: linear-gradient(180deg, #cfe6ff 0%, #6aa8ff 50%, #b06bff 100%);
-    -webkit-background-clip: text; background-clip: text; color: transparent;
-    filter: drop-shadow(0 0 16px rgba(80, 140, 255, .85)); margin-bottom: 8px;
-  }
-  .p-opt {
-    -webkit-appearance: none; appearance: none; cursor: pointer; pointer-events: auto;
-    width: clamp(220px, 64vw, 320px); padding: 14px 18px;
-    border-radius: 12px; border: 2px solid rgba(150, 170, 255, .3);
-    background: rgba(22, 14, 44, .6); color: #eef4ff;
-    font-weight: 800; font-size: clamp(15px, 3.6vw, 19px); letter-spacing: 2px;
-    transition: transform .15s, border-color .15s, box-shadow .15s, background .15s;
-  }
-  .p-opt.active {
-    transform: scale(1.05); border-color: #38e8ff; background: rgba(40, 24, 70, .85);
-    box-shadow: 0 0 22px rgba(56, 232, 255, .65);
-  }
-  #pause .p-hint {
-    margin-top: 6px; font-weight: 700; font-size: clamp(11px, 2.6vw, 14px); letter-spacing: 2px;
-    color: rgba(220, 230, 255, .75); text-shadow: 0 0 8px rgba(120, 80, 255, .8);
+  @media (prefers-reduced-motion: reduce) {
+    .grid, .cta, .logo, .scrollcue { animation: none; }
+    .reveal { transition: none; opacity: 1; transform: none; }
   }
 </style>
 </head>
 <body>
-<div id="hud">
-  <div id="score">0</div>
-  <div id="combo">COMBO ×2</div>
-  <div id="dist">0m</div>
-  <div id="lives"></div>
-  <div id="popups"></div>
-  <div id="flash"></div>
-  <div id="gameover">
-    <div class="go-title" id="go-title">GAME OVER</div>
-    <div class="go-score" id="go-score">0</div>
-    <div class="go-dist" id="go-dist">0m</div>
-    <div class="go-best" id="go-best">BEST 0</div>
-    <div class="go-record" id="go-record">★ NEW RECORD ★</div>
-    <div class="go-retry">PRESS ANY KEY / TAP TO RETRY</div>
-  </div>
-  <div id="title">
-    <div class="t-logo">NEON RUSH</div>
-    <div class="t-start">PRESS ANY KEY / TAP TO START</div>
-  </div>
-  <div id="select">
-    <div class="s-head">SELECT STAGE</div>
-    <div class="s-cards">
-      <button class="s-card" data-i="0"><span class="s-emoji">🌃</span><span class="s-name">ネオン街</span></button>
-      <button class="s-card" data-i="1"><span class="s-emoji">🏖️</span><span class="s-name">砂浜</span></button>
-      <button class="s-card" data-i="2"><span class="s-emoji">🌿</span><span class="s-name">ジャングル</span></button>
+
+<header class="hero">
+  <div class="sky"></div>
+  <div class="stars"></div>
+  <div class="sun"></div>
+  <div class="grid"></div>
+  <div class="scan"></div>
+  <div class="hero-inner">
+    <span class="badge">BROWSER 3D RUNNER</span>
+    <h1 class="logo">NEON&nbsp;RUSH</h1>
+    <p class="tagline">ネオンを切り裂いて、夕日へ駆け抜けろ。</p>
+    <p class="sub">3つの世界を疾走する、シンセウェーブ3Dランナー。</p>
+    <a class="cta" href="play.html">▶&nbsp;いますぐプレイ</a>
+    <div class="chips">
+      <span><b>無料</b>・登録不要</span>
+      <span><b>インストール不要</b>・ブラウザで即</span>
+      <span>PC / スマホ / <b>ゲームパッド</b></span>
     </div>
-    <div class="s-hint">← → / STICK&nbsp;SELECT&nbsp;&nbsp;·&nbsp;&nbsp;ENTER / Ⓐ&nbsp;START</div>
   </div>
-  <button id="pausebtn" aria-label="pause">⏸</button>
-  <div id="pause">
-    <div class="p-head">PAUSED</div>
-    <button class="p-opt" data-i="0">▶&nbsp;&nbsp;再開</button>
-    <button class="p-opt" data-i="1">≡&nbsp;&nbsp;ステージ選択へ</button>
-    <div class="p-hint">ESC / START で再開</div>
+  <div class="scrollcue">SCROLL ▾</div>
+</header>
+
+<section>
+  <div class="wrap">
+    <div class="reveal">
+      <div class="eyebrow">3 STAGES</div>
+      <h2 class="h2">3つの世界を駆け抜けろ</h2>
+      <p class="lead">ステージごとに空も地面も、転がるボールも、立ちはだかる壁も変わる。空気感がまるごと切り替わる。</p>
+    </div>
+    <div class="stages">
+      <a class="stage neon reveal" href="play.html">
+        <span class="tag">STAGE 01</span>
+        <img src="/shots/neon.jpg" alt="ネオン街ステージ" loading="lazy">
+        <div class="meta"><div class="n">ネオン街</div><div class="d">紫の夜景とネオングリッド。ディスコボールで工事現場のコーンを抜ける。</div></div>
+      </a>
+      <a class="stage beach reveal" href="play.html">
+        <span class="tag">STAGE 02</span>
+        <img src="/shots/beach.jpg" alt="砂浜ステージ" loading="lazy">
+        <div class="meta"><div class="n">砂浜</div><div class="d">青空と砂地、ヤシの木。ビーチボールでパラソルとカニを避ける。</div></div>
+      </a>
+      <a class="stage jungle reveal" href="play.html">
+        <span class="tag">STAGE 03</span>
+        <img src="/shots/jungle.jpg" alt="ジャングルステージ" loading="lazy">
+        <div class="meta"><div class="n">ジャングル</div><div class="d">緑の密林と土の道。転がる岩で岩と薮を切り抜ける。</div></div>
+      </a>
+    </div>
   </div>
-</div>
-<script type="module" src="/src/main.js"></script>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="reveal">
+      <div class="eyebrow">FEATURES</div>
+      <h2 class="h2">遊びごたえも、全部入り</h2>
+    </div>
+    <div class="features">
+      <div class="feat reveal"><div class="ic">🎮</div><h3>ゲームパッド対応</h3><p>キーボード・スワイプ・コントローラ。好きな入力で。</p></div>
+      <div class="feat reveal"><div class="ic">🔊</div><h3>効果音 &amp; BGM</h3><p>コンボで音階が上がる、合成生成のサウンド。</p></div>
+      <div class="feat reveal"><div class="ic">🏁</div><h3>ゴール &amp; スコア</h3><p>2000m走破でクリア。ハイスコアに挑め。</p></div>
+      <div class="feat reveal"><div class="ic">⚡</div><h3>ブラウザで即</h3><p>インストール不要。開いた瞬間から走り出す。</p></div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="reveal">
+      <div class="eyebrow">GALLERY</div>
+      <h2 class="h2">スクリーンショット</h2>
+    </div>
+    <div class="gallery">
+      <img class="reveal" src="/shots/select.jpg" alt="ステージ選択画面" loading="lazy">
+      <img class="reveal" src="/shots/clear.jpg" alt="ステージクリア画面" loading="lazy">
+      <img class="reveal" src="/shots/pause.jpg" alt="ポーズ画面" loading="lazy">
+    </div>
+  </div>
+</section>
+
+<section class="final">
+  <div class="wrap reveal">
+    <div class="band">
+      <h2>準備はいい？</h2>
+      <p>3ステージ・無料・ブラウザで今すぐ。</p>
+      <a class="cta" href="play.html">▶&nbsp;いますぐプレイ</a>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div class="fl">NEON RUSH</div>
+    <p>Three.js 製・アセットゼロ（図形とシェーダーだけで構築）・ブラウザで動作</p>
+    <p>制作: Claude Fable 5</p>
+  </div>
+</footer>
+
+<script>
+  const io = new IntersectionObserver((entries) => {
+    for (const e of entries) {
+      if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); }
+    }
+  }, { threshold: 0.14 });
+  document.querySelectorAll('.reveal').forEach((el, i) => {
+    el.style.transitionDelay = `${(i % 4) * 70}ms`;
+    io.observe(el);
+  });
+</script>
 </body>
 </html>
