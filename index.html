@@ -121,23 +121,106 @@
     animation: blink 1.4s ease-in-out infinite;
   }
 
-  #start {
-    position: absolute; bottom: 12%; left: 50%; transform: translateX(-50%);
-    text-align: center; transition: opacity .6s;
-  }
-  #start .title {
-    font-style: italic; font-weight: 900; font-size: clamp(34px, 7vw, 56px); letter-spacing: 4px;
-    background: linear-gradient(180deg, #9af7ff 0%, #18e7ff 45%, #ff2bd6 100%);
-    -webkit-background-clip: text; background-clip: text; color: transparent;
-    filter: drop-shadow(0 0 16px rgba(40, 200, 255, .8));
-  }
-  #start .keys {
-    margin-top: 10px; font-weight: 700; font-size: clamp(12px, 2.4vw, 15px); letter-spacing: 2px;
-    color: rgba(230, 240, 255, .85); text-shadow: 0 0 8px rgba(120, 80, 255, .8);
-    animation: blink 1.6s ease-in-out infinite;
-  }
   @keyframes blink { 50% { opacity: .35; } }
-  #start.hidden { opacity: 0; }
+
+  /* HUD はプレイ中のみ表示（タイトル/選択中は隠す） */
+  body.menu #score, body.menu #combo, body.menu #dist, body.menu #lives { opacity: 0; }
+
+  /* ---- title ---- */
+  #title {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px;
+    transition: opacity .4s;
+  }
+  #title.hidden { opacity: 0; pointer-events: none; }
+  #title .t-logo {
+    font-style: italic; font-weight: 900; font-size: clamp(48px, 12vw, 104px); letter-spacing: 5px;
+    background: linear-gradient(180deg, #9af7ff 0%, #18e7ff 42%, #ff2bd6 100%);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+    filter: drop-shadow(0 0 22px rgba(40, 200, 255, .85));
+  }
+  #title .t-start {
+    font-weight: 800; font-size: clamp(13px, 3vw, 18px); letter-spacing: 3px;
+    color: rgba(235, 242, 255, .92); text-shadow: 0 0 10px rgba(120, 80, 255, .9);
+    animation: blink 1.5s ease-in-out infinite;
+  }
+
+  /* ---- stage select ---- */
+  #select {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 22px;
+    transition: opacity .35s;
+  }
+  #select.hidden { opacity: 0; pointer-events: none; }
+  #select .s-head {
+    font-style: italic; font-weight: 900; font-size: clamp(20px, 5vw, 34px); letter-spacing: 5px;
+    color: #eaf2ff; text-shadow: 0 0 14px rgba(120, 130, 255, .9);
+  }
+  #select .s-cards { display: flex; gap: clamp(10px, 3vw, 22px); }
+  .s-card {
+    -webkit-appearance: none; appearance: none; cursor: pointer;
+    pointer-events: auto;
+    width: clamp(90px, 26vw, 150px); height: clamp(120px, 34vw, 190px);
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px;
+    border-radius: 16px; border: 2px solid rgba(150, 170, 255, .35);
+    background: rgba(20, 12, 40, .55); color: #fff;
+    transition: transform .18s, border-color .18s, box-shadow .18s, background .18s;
+  }
+  .s-card .s-emoji { font-size: clamp(34px, 9vw, 56px); line-height: 1; }
+  .s-card .s-name { font-weight: 800; font-size: clamp(13px, 3.2vw, 18px); letter-spacing: 1px; }
+  .s-card.active {
+    transform: translateY(-8px) scale(1.06);
+    border-color: #38e8ff;
+    background: rgba(40, 24, 70, .8);
+    box-shadow: 0 0 26px rgba(56, 232, 255, .7), inset 0 0 18px rgba(255, 60, 200, .25);
+  }
+  #select .s-hint {
+    font-weight: 700; font-size: clamp(11px, 2.6vw, 15px); letter-spacing: 2px;
+    color: rgba(225, 235, 255, .8); text-shadow: 0 0 8px rgba(120, 80, 255, .8);
+    animation: blink 1.7s ease-in-out infinite;
+  }
+
+  /* ---- pause ---- */
+  #pausebtn {
+    position: absolute; left: 18px; bottom: 18px; pointer-events: auto;
+    width: 46px; height: 46px; border-radius: 50%;
+    -webkit-appearance: none; appearance: none; cursor: pointer;
+    border: 2px solid rgba(160, 180, 255, .5); background: rgba(18, 10, 36, .55);
+    color: #eaf2ff; font-size: 18px; line-height: 1;
+    transition: opacity .3s, transform .12s;
+  }
+  #pausebtn:active { transform: scale(.92); }
+  body.menu #pausebtn, body.paused #pausebtn { opacity: 0; pointer-events: none; }
+
+  #pause {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px;
+    background: radial-gradient(ellipse at center, rgba(20, 8, 44, .55) 0%, rgba(6, 2, 16, .9) 100%);
+    opacity: 0; pointer-events: none; transition: opacity .3s;
+  }
+  body.paused #pause { opacity: 1; pointer-events: auto; }
+  #pause .p-head {
+    font-style: italic; font-weight: 900; font-size: clamp(30px, 8vw, 54px); letter-spacing: 6px;
+    background: linear-gradient(180deg, #cfe6ff 0%, #6aa8ff 50%, #b06bff 100%);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+    filter: drop-shadow(0 0 16px rgba(80, 140, 255, .85)); margin-bottom: 8px;
+  }
+  .p-opt {
+    -webkit-appearance: none; appearance: none; cursor: pointer; pointer-events: auto;
+    width: clamp(220px, 64vw, 320px); padding: 14px 18px;
+    border-radius: 12px; border: 2px solid rgba(150, 170, 255, .3);
+    background: rgba(22, 14, 44, .6); color: #eef4ff;
+    font-weight: 800; font-size: clamp(15px, 3.6vw, 19px); letter-spacing: 2px;
+    transition: transform .15s, border-color .15s, box-shadow .15s, background .15s;
+  }
+  .p-opt.active {
+    transform: scale(1.05); border-color: #38e8ff; background: rgba(40, 24, 70, .85);
+    box-shadow: 0 0 22px rgba(56, 232, 255, .65);
+  }
+  #pause .p-hint {
+    margin-top: 6px; font-weight: 700; font-size: clamp(11px, 2.6vw, 14px); letter-spacing: 2px;
+    color: rgba(220, 230, 255, .75); text-shadow: 0 0 8px rgba(120, 80, 255, .8);
+  }
 </style>
 </head>
 <body>
@@ -156,9 +239,25 @@
     <div class="go-record" id="go-record">★ NEW RECORD ★</div>
     <div class="go-retry">PRESS ANY KEY / TAP TO RETRY</div>
   </div>
-  <div id="start">
-    <div class="title">NEON RUSH</div>
-    <div class="keys">← → / STICK&nbsp;MOVE&nbsp;&nbsp;·&nbsp;&nbsp;SPACE / Ⓐ&nbsp;JUMP&nbsp;&nbsp;—&nbsp;&nbsp;GOAL 2000m</div>
+  <div id="title">
+    <div class="t-logo">NEON RUSH</div>
+    <div class="t-start">PRESS ANY KEY / TAP TO START</div>
+  </div>
+  <div id="select">
+    <div class="s-head">SELECT STAGE</div>
+    <div class="s-cards">
+      <button class="s-card" data-i="0"><span class="s-emoji">🌃</span><span class="s-name">ネオン街</span></button>
+      <button class="s-card" data-i="1"><span class="s-emoji">🏖️</span><span class="s-name">砂浜</span></button>
+      <button class="s-card" data-i="2"><span class="s-emoji">🌿</span><span class="s-name">ジャングル</span></button>
+    </div>
+    <div class="s-hint">← → / STICK&nbsp;SELECT&nbsp;&nbsp;·&nbsp;&nbsp;ENTER / Ⓐ&nbsp;START</div>
+  </div>
+  <button id="pausebtn" aria-label="pause">⏸</button>
+  <div id="pause">
+    <div class="p-head">PAUSED</div>
+    <button class="p-opt" data-i="0">▶&nbsp;&nbsp;再開</button>
+    <button class="p-opt" data-i="1">≡&nbsp;&nbsp;ステージ選択へ</button>
+    <div class="p-hint">ESC / START で再開</div>
   </div>
 </div>
 <script type="module" src="/src/main.js"></script>
