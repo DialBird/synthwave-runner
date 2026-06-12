@@ -2,3 +2,9 @@ node_modules/
 dist/
 .wrangler/
 .DS_Store
+
+# secrets（.env は平文のまま git に載せない / .env.example のみ共有）
+.env
+.env.*
+!.env.example
+.env.keys

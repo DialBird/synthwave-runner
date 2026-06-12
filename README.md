@@ -60,6 +60,20 @@ pnpm run deploy         # Cloudflare Workers (static assets) にデプロイ
 
 ブラウザの自動再生制約により、音は初回のキー入力／タップで開始する。
 
+## シークレット漏洩防止（gitleaks）
+
+2層で守る。**保証はCI側**、ローカルは早期チェック。
+
+| 層 | 実体 | 効き方 |
+|---|---|---|
+| CI ゲート | `.github/workflows/gitleaks.yml` | push/PRごとにサーバー側で全履歴スキャン。`--no-verify`で回避不可・ローカル設定に非依存（本当の保証） |
+| ローカル pre-commit | `.githooks/pre-commit`（`core.hooksPath`で参照） | `git commit`時に早期検出。`pnpm install`の`prepare`で自動有効化。バイパス可能なので保証ではない |
+
+- ルールは `.gitleaks.toml`（`[extend] useDefault = true` でビルトイン有効）
+- `.env` は平文のまま `.gitignore` で除外（暗号化コミットはしない方針）
+- clone直後は `pnpm install` すれば `prepare` がフックを張る（手動なら `git config core.hooksPath .githooks`）
+- gitleaks-action は個人アカウントのためライセンス鍵不要
+
 ## 構成
 
 - `src/main.js` — ゲーム本体（テーマシステム・シェーダー・ボール/壁/装飾ビルダー・画面フロー・ゲームループ）

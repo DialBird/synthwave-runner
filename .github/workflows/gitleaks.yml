@@ -1,0 +1,15 @@
+# CI ゲート: push / PR のたびに gitleaks でシークレット混入をスキャンする。
+# サーバー側で走るため --no-verify では回避不可・ローカル設定に依存しない（これが本当の保証）。
+# DialBird は個人アカウントのため gitleaks-action はライセンス鍵不要。
+name: gitleaks
+on: [push, pull_request]
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # 全履歴を見て過去コミットの漏洩も検出する
+      - uses: gitleaks/gitleaks-action@v3
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

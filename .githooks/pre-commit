@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+# リポジトリ内に置く pre-commit フック（core.hooksPath で参照 / clone に追従）。
+# ステージされた変更にシークレットが無いか gitleaks でチェックする。
+# 注意: これはローカルの早期チェック。最終的な保証は CI (.github/workflows/gitleaks.yml)。
+if command -v gitleaks >/dev/null 2>&1; then
+  gitleaks git --pre-commit --staged --verbose
+else
+  echo "警告: gitleaks 未インストール（brew install gitleaks）。CI 側で再チェックされます。" >&2
+fi

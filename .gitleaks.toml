@@ -1,0 +1,20 @@
+# gitleaks 設定。ビルトインルール（AWS / GitHub / Cloudflare token 等）を維持しつつ、
+# 平文 .env の誤コミットを追加で弾く。
+#
+# 重要: [extend] useDefault = true がないとビルトインルールが無効化される。
+
+[extend]
+useDefault = true
+
+[[rules]]
+  id = "plaintext-dotenv"
+  description = "平文の .env を commit しようとしている（.env は gitignore で除外する運用）"
+  regex = '''(?i)(SECRET|TOKEN|PASSWORD|API_KEY|PRIVATE_KEY|REFRESH_TOKEN|CLOUDFLARE_\w+)\s*=\s*[^\s"encrypted:].+'''
+  path = '''\.env$'''
+
+[allowlist]
+  description = "テンプレート・鍵ファイルは除外"
+  paths = [
+    '''\.env\.example''',
+    '''\.env\.keys''',
+  ]
