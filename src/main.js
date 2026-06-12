@@ -7,6 +7,17 @@ import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
 import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
+import { initAudio, resumeAudio, loadBgm, startBgm, duckBgm, sfx } from './audio.js';
+
+initAudio();
+loadBgm(`${import.meta.env.BASE_URL}bgm.mp3`);
+let audioStarted = false;
+function startAudioOnce() {
+  resumeAudio();
+  if (audioStarted) return;
+  audioStarted = true;
+  startBgm();
+}
 
 // ---------------------------------------------------------------- constants
 const LANES = [-2.2, 0, 2.2];
@@ -14,6 +25,7 @@ const BALL_R = 0.55;
 const WORLD_DEPTH = 240;
 const SPAWN_Z = -195;
 const FOG_COLOR = 0x16042e;
+const GOAL_DIST = 2000; // この距離を走り切るとステージクリア
 
 // ---------------------------------------------------------------- renderer / scene
 const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -355,6 +367,42 @@ for (let i = 0; i < 12; i++) {
   rings.push({ mesh, active: false, lane: 0, air: false });
 }
 
+// ---------------------------------------------------------------- goal gate
+let goalActive = false;
+const goal = new THREE.Group();
+{
+  const topMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(0x35f0ff).multiplyScalar(2.6), fog: true });
+  const postMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(0xff2bd6).multiplyScalar(2.4), fog: true });
+  const postGeo = new THREE.BoxGeometry(0.4, 6.2, 0.4);
+  const pL = new THREE.Mesh(postGeo, postMat); pL.position.set(-3.5, 3.1, 0);
+  const pR = new THREE.Mesh(postGeo, postMat); pR.position.set(3.5, 3.1, 0);
+  const bar = new THREE.Mesh(new THREE.BoxGeometry(7.4, 0.55, 0.55), topMat); bar.position.set(0, 6.0, 0);
+  goal.add(pL, pR, bar);
+  // GOAL バナー（市松＋テキスト）
+  const c = document.createElement('canvas'); c.width = 512; c.height = 128;
+  const ctx = c.getContext('2d');
+  ctx.fillStyle = '#0a0018'; ctx.fillRect(0, 0, 512, 128);
+  for (let x = 0; x < 16; x++) {
+    for (let y = 0; y < 2; y++) {
+      ctx.fillStyle = (x + y) % 2 ? '#f0f6ff' : '#1a0830';
+      ctx.fillRect(x * 32, y === 0 ? 0 : 104, 32, 24);
+    }
+  }
+  ctx.font = '900 italic 74px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillStyle = '#ffe23a'; ctx.fillText('GOAL', 256, 66);
+  ctx.lineWidth = 3; ctx.strokeStyle = '#ff2bd6'; ctx.strokeText('GOAL', 256, 66);
+  const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace;
+  const banner = new THREE.Mesh(
+    new THREE.PlaneGeometry(7.2, 1.8),
+    new THREE.MeshBasicMaterial({ map: tex, fog: true, transparent: true }),
+  );
+  banner.position.set(0, 4.9, 0.32);
+  goal.add(banner);
+}
+goal.visible = false;
+goal.position.z = SPAWN_Z;
+scene.add(goal);
+
 // ---------------------------------------------------------------- speed streaks
 const streaks = (() => {
   const n = 260;
@@ -413,8 +461,11 @@ const $flash = document.getElementById('flash');
 const $start = document.getElementById('start');
 const $lives = document.getElementById('lives');
 const $gameover = document.getElementById('gameover');
+const $goTitle = document.getElementById('go-title');
 const $goScore = document.getElementById('go-score');
 const $goDist = document.getElementById('go-dist');
+const $goBest = document.getElementById('go-best');
+const $goRecord = document.getElementById('go-record');
 
 const projV = new THREE.Vector3();
 function popup(text, worldPos) {
@@ -446,8 +497,25 @@ const state = {
   autoCool: 0,
   lives: 3,
   gameOver: false,
+  cleared: false,
   overCool: 0,
+  hitstop: 0,
+  pendingGameOver: false,
 };
+
+// リザルトのスコアをイージングでカウントアップ
+let countRaf = 0;
+function animateCount(el, target, ms) {
+  cancelAnimationFrame(countRaf);
+  const start = performance.now();
+  const step = (now) => {
+    const k = Math.min(1, (now - start) / ms);
+    const e = 1 - Math.pow(1 - k, 3); // easeOutCubic
+    el.textContent = Math.floor(target * e).toLocaleString('en-US');
+    if (k < 1) countRaf = requestAnimationFrame(step);
+  };
+  countRaf = requestAnimationFrame(step);
+}
 
 function updateLives() {
   $lives.innerHTML = [0, 1, 2]
@@ -456,31 +524,56 @@ function updateLives() {
 }
 updateLives();
 
-function doGameOver() {
+const BEST_KEY = 'neonrush_best';
+// cleared=true: 正規ゴール / false: ライフ切れ
+function doGameOver(cleared = false) {
   state.gameOver = true;
+  state.cleared = cleared;
   state.overCool = 0.9; // 直後の誤タップでリトライしないためのクールダウン
-  $goScore.textContent = Math.floor(state.score).toLocaleString('en-US');
+  let final = Math.floor(state.score);
+  if (cleared) final += 3000 + state.lives * 1000; // クリアボーナス（残ライフ分）
+  const prevBest = Number(localStorage.getItem(BEST_KEY) || 0);
+  const isRecord = final > prevBest;
+  if (isRecord) localStorage.setItem(BEST_KEY, String(final));
+  $goTitle.textContent = cleared ? 'STAGE CLEAR!' : 'GAME OVER';
   $goDist.textContent = `${Math.floor(state.distance)}m`;
+  $goBest.textContent = `BEST ${Math.max(final, prevBest).toLocaleString('en-US')}`;
+  $goRecord.classList.toggle('show', isRecord);
+  $gameover.classList.toggle('clear', cleared);
   $gameover.classList.add('on');
+  animateCount($goScore, final, 1100);
+  if (cleared) sfx.clear(); else sfx.gameOver();
+  duckBgm(cleared ? 0.3 : 0.12, 0.5); // BGM を絞ってリザルトを際立たせる
+}
+
+function resetRun() {
+  for (const o of obstacles) { o.active = false; o.mesh.visible = false; }
+  for (const r of rings) { r.active = false; r.mesh.visible = false; }
+  goalActive = false;
+  goal.visible = false;
+  goal.position.z = SPAWN_Z;
 }
 
 function restart() {
-  for (const o of obstacles) { o.active = false; o.mesh.visible = false; }
-  for (const r of rings) { r.active = false; r.mesh.visible = false; }
+  resetRun();
   Object.assign(state, {
     lane: 1, jumpY: 0, vy: 0, grounded: true,
     speed: 17, distance: 0, score: 0, combo: 0,
     nextSpawn: 30, invincible: 1.2, shake: 0,
-    lives: 3, gameOver: false, overCool: 0,
+    lives: 3, gameOver: false, cleared: false, overCool: 0,
+    hitstop: 0, pendingGameOver: false,
   });
   updateLives();
-  $gameover.classList.remove('on');
+  $gameover.classList.remove('on', 'clear');
+  $goRecord.classList.remove('show');
+  duckBgm(0.5, 0.5); // BGM を戻す
 }
 
 function jump() {
   if (!state.grounded) return;
   state.grounded = false;
   state.vy = 9.6;
+  sfx.jump();
 }
 function setLane(l) {
   state.lane = THREE.MathUtils.clamp(l, 0, 2);
@@ -488,35 +581,72 @@ function setLane(l) {
 
 // ---------------------------------------------------------------- input
 function userTakeover() {
+  startAudioOnce();
   if (!state.demo) return;
   state.demo = false;
   $start.classList.add('hidden');
+  // 実プレイは 0m から仕切り直し（デモのスコアは持ち越さない）
+  resetRun();
+  state.distance = 0; state.score = 0; state.combo = 0;
+  state.nextSpawn = 30; state.invincible = 1.0;
+}
+function moveTo(lane) {
+  const prev = state.lane;
+  setLane(lane);
+  if (state.lane !== prev) sfx.move();
 }
 addEventListener('keydown', (e) => {
   if (e.repeat) return;
   if (state.gameOver) {
-    if (state.overCool <= 0) restart();
+    if (state.overCool <= 0) { startAudioOnce(); restart(); }
     return;
   }
-  if (e.code === 'ArrowLeft' || e.code === 'KeyA') { userTakeover(); setLane(state.lane - 1); }
-  else if (e.code === 'ArrowRight' || e.code === 'KeyD') { userTakeover(); setLane(state.lane + 1); }
+  if (e.code === 'ArrowLeft' || e.code === 'KeyA') { userTakeover(); moveTo(state.lane - 1); }
+  else if (e.code === 'ArrowRight' || e.code === 'KeyD') { userTakeover(); moveTo(state.lane + 1); }
   else if (e.code === 'Space' || e.code === 'ArrowUp' || e.code === 'KeyW') { userTakeover(); jump(); }
 });
 let touchX = 0, touchY = 0;
 addEventListener('touchstart', (e) => { touchX = e.touches[0].clientX; touchY = e.touches[0].clientY; }, { passive: true });
 addEventListener('touchend', (e) => {
   if (state.gameOver) {
-    if (state.overCool <= 0) restart();
+    if (state.overCool <= 0) { startAudioOnce(); restart(); }
     return;
   }
   const dx = e.changedTouches[0].clientX - touchX;
   const dy = e.changedTouches[0].clientY - touchY;
   userTakeover();
   if (dy < -40 && Math.abs(dy) > Math.abs(dx)) jump();
-  else if (dx > 30) setLane(state.lane + 1);
-  else if (dx < -30) setLane(state.lane - 1);
+  else if (dx > 30) moveTo(state.lane + 1);
+  else if (dx < -30) moveTo(state.lane - 1);
   else jump();
 }, { passive: true });
+
+// ---------------------------------------------------------------- gamepad
+const pad = { prev: [], zone: 0 }; // zone: -1 左 / 0 中央 / 1 右（スティック・十字キー共通）
+const JUMP_BUTTONS = [0, 1, 2, 3, 12]; // A/B/X/Y + 十字上（配置の癖を吸収）
+addEventListener('gamepadconnected', () => { pad.prev = []; pad.zone = 0; });
+function pollGamepad() {
+  const pads = navigator.getGamepads ? navigator.getGamepads() : [];
+  let gp = null;
+  for (const g of pads) { if (g) { gp = g; break; } }
+  if (!gp) return;
+
+  const down = (i) => !!(gp.buttons[i] && gp.buttons[i].pressed);
+  const justDown = (i) => down(i) && !pad.prev[i];
+  const anyJust = gp.buttons.some((b, i) => b.pressed && !pad.prev[i]);
+
+  if (state.gameOver) {
+    if (anyJust && state.overCool <= 0) { startAudioOnce(); restart(); }
+  } else {
+    // レーン移動: 十字キー左右(14/15) or 左スティックX(axes[0]) のエッジで1段
+    const ax = gp.axes[0] || 0;
+    const zone = down(14) || ax < -0.5 ? -1 : down(15) || ax > 0.5 ? 1 : 0;
+    if (zone !== 0 && pad.zone === 0) { userTakeover(); moveTo(state.lane + zone); }
+    pad.zone = zone;
+    if (JUMP_BUTTONS.some(justDown)) { userTakeover(); jump(); }
+  }
+  pad.prev = gp.buttons.map((b) => b.pressed);
+}
 
 // ---------------------------------------------------------------- spawner
 function freeFrom(pool) { return pool.find((o) => !o.active); }
@@ -587,7 +717,7 @@ function autopilot(dt) {
 }
 
 // E2E・デバッグ用ハンドル
-window.__neon = { state, doGameOver, restart };
+window.__neon = { state, doGameOver, restart, sfx, pollGamepad };
 
 // ---------------------------------------------------------------- main loop
 const clock = new THREE.Clock();
@@ -598,6 +728,8 @@ function tick() {
   const dt = Math.min(clock.getDelta(), 0.05);
   const t = clock.elapsedTime;
 
+  pollGamepad();
+
   // game over: 世界を止めて空と観覧車だけ生かす
   if (state.gameOver) {
     state.overCool = Math.max(0, state.overCool - dt);
@@ -605,6 +737,23 @@ function tick() {
     gradePass.uniforms.uTime.value = t;
     wheel.rotation.z += dt * 0.12;
     ball.rotation.x -= dt * 0.6;
+    composer.render();
+    return;
+  }
+
+  // hitstop: 被弾の瞬間に世界を凍結し、激しいシェイクで衝撃を演出する
+  if (state.hitstop > 0) {
+    state.hitstop -= dt;
+    const s = 0.34;
+    camera.position.x = state.x * 0.55 + (Math.random() - 0.5) * s;
+    camera.position.y = 3.1 + state.jumpY * 0.25 + (Math.random() - 0.5) * s;
+    camera.lookAt(state.x * 0.7, 1.35 + state.jumpY * 0.3, -10);
+    skyUniforms.uTime.value = t;
+    gradePass.uniforms.uTime.value = t;
+    if (state.hitstop <= 0 && state.pendingGameOver) {
+      state.pendingGameOver = false;
+      doGameOver();
+    }
     composer.render();
     return;
   }
@@ -673,18 +822,22 @@ function tick() {
       && o.lane === state.lane
       && Math.abs(o.mesh.position.z) < 0.75
       && state.jumpY < 1.15) {
-      // hit: コンボ消滅 + シェイク + フラッシュ。実プレイ時のみライフが減る（デモは不死）
+      // hit: コンボ消滅 + ヒットストップ + シェイク + フラッシュ。実プレイ時のみライフが減る（デモは不死）
       state.combo = 0;
       state.invincible = 1.6;
       state.shake = 1;
       $flash.style.opacity = '1';
-      setTimeout(() => { $flash.style.opacity = '0'; }, 180);
+      setTimeout(() => { $flash.style.opacity = '0'; }, 220);
       popup('CRASH!', o.mesh.position.clone().setY(1.6));
+      sfx.crash();
+      const fatal = !state.demo && state.lives - 1 <= 0;
+      state.hitstop = fatal ? 0.2 : 0.1; // 致命傷は長めに凍結
       if (!state.demo) {
         state.lives -= 1;
         updateLives();
-        if (state.lives <= 0) doGameOver();
+        if (fatal) state.pendingGameOver = true; // hitstop 明けに doGameOver
       }
+      break; // 同一フレームで複数被弾しない
     }
   }
 
@@ -703,11 +856,28 @@ function tick() {
       state.combo += 1;
       state.score += 200 * state.combo;
       popup(`TRICK! +${200 * state.combo}`, r.mesh.position.clone().setY(r.mesh.position.y + 0.8));
+      sfx.ring(state.combo);
     }
   }
 
-  // spawn
-  if (state.distance > state.nextSpawn) {
+  // goal gate: ゴール手前(=ゲートが流れて来る距離分)で出現させ、通過したらクリア。デモは無限走行
+  const goalWindow = GOAL_DIST + SPAWN_Z; // ゲートが0に着く頃に distance が GOAL_DIST になる
+  if (!state.demo && !goalActive && !state.cleared && state.distance >= goalWindow) {
+    goalActive = true;
+    goal.visible = true;
+    goal.position.z = SPAWN_Z;
+  }
+  if (goalActive) {
+    goal.position.z += dz;
+    if (goal.position.z > 0.6) {
+      goalActive = false;
+      goal.visible = false;
+      doGameOver(true); // 正規ゴール
+    }
+  }
+
+  // spawn（ゴール手前のラン区間ではハザードを止めてクリーンに走らせる）
+  if (state.distance > state.nextSpawn && (state.demo || state.distance < goalWindow)) {
     spawnPattern();
     state.nextSpawn = state.distance + 18 + Math.random() * 12;
   }
@@ -718,7 +888,9 @@ function tick() {
     scoreShown = sc;
     $score.textContent = sc.toLocaleString('en-US');
   }
-  $dist.textContent = `${Math.floor(state.distance)}m ▸`;
+  $dist.textContent = state.demo
+    ? `${Math.floor(state.distance)}m ▸`
+    : `${Math.min(Math.floor(state.distance), GOAL_DIST)} / ${GOAL_DIST}m`;
   if (state.combo >= 2) {
     $combo.textContent = `COMBO ×${state.combo}`;
     $combo.classList.add('on');

@@ -75,11 +75,19 @@
     opacity: 0; pointer-events: none; transition: opacity .45s;
   }
   #gameover.on { opacity: 1; }
+  #gameover.clear {
+    background: radial-gradient(ellipse at center, rgba(0, 50, 55, .5) 0%, rgba(4, 8, 22, .88) 100%);
+  }
   #gameover .go-title {
     font-style: italic; font-weight: 900; font-size: clamp(42px, 9.5vw, 70px); letter-spacing: 5px;
     background: linear-gradient(180deg, #ffe0ec 0%, #ff2975 55%, #c1004a 100%);
     -webkit-background-clip: text; background-clip: text; color: transparent;
     filter: drop-shadow(0 0 18px rgba(255, 40, 110, .9));
+  }
+  #gameover.clear .go-title {
+    background: linear-gradient(180deg, #d8fff0 0%, #18e7ff 50%, #b06bff 100%);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+    filter: drop-shadow(0 0 20px rgba(40, 220, 255, .95));
   }
   #gameover .go-score {
     font-style: italic; font-weight: 900; font-size: clamp(34px, 7.5vw, 54px); letter-spacing: 2px;
@@ -90,6 +98,22 @@
   #gameover .go-dist {
     font-weight: 800; font-style: italic; font-size: clamp(15px, 3vw, 20px); letter-spacing: 2px;
     color: #9af2ff; text-shadow: 0 0 10px rgba(60, 210, 255, .9);
+  }
+  #gameover .go-best {
+    margin-top: 4px; font-weight: 800; font-style: italic; font-size: clamp(13px, 2.5vw, 17px); letter-spacing: 3px;
+    color: #d7c2ff; text-shadow: 0 0 10px rgba(150, 110, 255, .8);
+  }
+  #gameover .go-record {
+    margin-top: 14px; font-style: italic; font-weight: 900; font-size: clamp(18px, 4vw, 28px); letter-spacing: 4px;
+    background: linear-gradient(180deg, #fffae0 0%, #ffe23a 45%, #ff7bd5 100%);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+    filter: drop-shadow(0 0 16px rgba(255, 220, 60, .95));
+    opacity: 0; transform: scale(.6); pointer-events: none;
+  }
+  #gameover .go-record.show { animation: record-pop 2s cubic-bezier(.17, .89, .32, 1.27) infinite; }
+  @keyframes record-pop {
+    0%, 100% { opacity: 1; transform: scale(1) rotate(-2deg); }
+    50%      { opacity: 1; transform: scale(1.12) rotate(2deg); }
   }
   #gameover .go-retry {
     margin-top: 22px; font-weight: 700; font-size: clamp(13px, 2.6vw, 16px); letter-spacing: 3px;
@@ -125,14 +149,16 @@
   <div id="popups"></div>
   <div id="flash"></div>
   <div id="gameover">
-    <div class="go-title">GAME OVER</div>
+    <div class="go-title" id="go-title">GAME OVER</div>
     <div class="go-score" id="go-score">0</div>
     <div class="go-dist" id="go-dist">0m</div>
+    <div class="go-best" id="go-best">BEST 0</div>
+    <div class="go-record" id="go-record">★ NEW RECORD ★</div>
     <div class="go-retry">PRESS ANY KEY / TAP TO RETRY</div>
   </div>
   <div id="start">
     <div class="title">NEON RUSH</div>
-    <div class="keys">← → MOVE&nbsp;&nbsp;/&nbsp;&nbsp;SPACE JUMP&nbsp;&nbsp;—&nbsp;&nbsp;DEMO PLAYING</div>
+    <div class="keys">← → / STICK&nbsp;MOVE&nbsp;&nbsp;·&nbsp;&nbsp;SPACE / Ⓐ&nbsp;JUMP&nbsp;&nbsp;—&nbsp;&nbsp;GOAL 2000m</div>
   </div>
 </div>
 <script type="module" src="/src/main.js"></script>
